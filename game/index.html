@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OverCrash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,900&family=Chakra+Petch:wght@700&family=Exo+2:ital,wght@1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="hud.css?v=41">
+</head>
+<body>
+<main class="game" id="game" data-phase="idle">
+  <video id="road" muted loop playsinline preload="auto" aria-hidden="true"></video>
+  <!-- Cena de quebra (Blender, mesma câmera da corrida): entra por cima da corrida no fim da rodada -->
+  <video class="crashVid" data-hazard="wall" muted playsinline preload="auto" aria-hidden="true" hidden></video>
+  <video class="crashVid" data-hazard="cliff" muted playsinline preload="auto" aria-hidden="true" hidden></video>
+  <video class="crashVid" data-hazard="bridge" muted playsinline preload="auto" aria-hidden="true" hidden></video>
+  <div class="tint" aria-hidden="true"></div>
+
+  <!-- Palco 1920×1080: coordenadas do quadro "HUD HÍBRIDO" do Figma (51:2715). Artes = PNGs do Codex. -->
+  <div class="stage" id="stage">
+    <!-- Fundo escuro do MENU dentro do palco: escurece o jogo, mas o painel aberto (z 5) fica por cima (Celio, 14/10) -->
+    <div class="backdrop" id="backdrop" hidden></div>
+    <div class="g" id="g-title" data-box="632,0,649,78" style="width:649px;height:78px"><div class="gi" style="transform:translate(-632px,0px)">
+    <!-- Placa vazia + logo principal do Codex (item 9, Figma 67:8606; title-item9-layout.json × 1920/1672) -->
+    <img class="art" src="assets/hud/title-empty.png" alt="" style="left:632px;top:0;width:649px;height:78px">
+    <div class="title-logo" style="left:814px;top:6.89px;width:284.78px;height:63.7px">
+      <img src="assets/hud/logo-principal.png" alt="OverCrash" style="left:-1.47px;top:-15.19px;width:289.32px;height:96.48px">
+    </div>
+    </div></div>
+    <div class="g" id="g-balance" data-box="9,0,587,118" style="width:587px;height:118px"><div class="gi" style="transform:translate(-9px,0px)">
+    <!-- Saldo -->
+    <section aria-label="Saldo" data-i18n-aria="aBalance">
+      <img class="art" src="assets/hud/balance.png" alt="" style="left:9px;top:0;width:587px;height:118px">
+      <span class="t lbl" style="left:95px;top:28px;width:201px;height:28px" data-i18n="balance">SALDO</span>
+      <strong class="t val amber" id="balance" style="left:94px;top:56px;width:300px;height:44px;font-size:32px">—</strong>
+      <span class="t lbl" id="demoTitle" style="left:433px;top:29px;width:140px;height:25px" data-i18n="demoChips">FICHAS DEMO</span>
+      <span class="t plate" id="demoMark" style="left:436px;top:62px;width:84px;height:29px">DEMO</span>
+    </section>
+
+
+    </div></div>
+    <div class="g" id="g-history" data-box="1327,0,588,134" style="width:588px;height:134px"><div class="gi" style="transform:translate(-1327px,0px)">
+    <!-- Últimas quebras -->
+    <section aria-label="Últimas quebras" data-i18n-aria="aLast">
+      <img class="art" src="assets/hud/history.png" alt="" style="left:1327px;top:0;width:588px;height:134px">
+      <span class="t lbl" style="left:1420px;top:24px;width:367px;height:30px" data-i18n="lastCrashes">ÚLTIMAS QUEBRAS</span>
+      <ol id="history" class="history"></ol>
+    </section>
+
+
+    </div></div>
+    <div class="g" id="g-side" data-box="8,119,488,424" style="width:488px;height:424px"><div class="gi" style="transform:translate(-8px,-119px)">
+    <!-- Painel lateral -->
+    <aside aria-label="Painel" data-i18n-aria="aPanel">
+      <!-- Painel sem os ícones fixos de eventos (Codex, item 10, Figma 67:8766); cada evento desenha o seu ícone -->
+      <img class="art" src="assets/hud/side-sem-eventos.png" alt="" style="left:8px;top:119px;width:488px;height:424px">
+      <div class="tabs" role="tablist">
+        <img class="art" id="tabArtOff" src="assets/hud/tab-player.png" alt="" hidden>
+        <img class="art" id="tabArtOn" src="assets/hud/tab-config-active.png" alt="" hidden>
+        <button class="t tab" role="tab" aria-selected="true" data-tab="config" data-i18n="tabConfig" style="left:14px;top:124px;width:177px;height:58px">CONFIGURAÇÃO</button>
+        <button class="t tab" role="tab" aria-selected="false" data-tab="player" data-i18n="tabPlayer" style="left:188px;top:124px;width:151px;height:58px">JOGADOR</button>
+        <button class="t tab" role="tab" aria-selected="false" data-tab="events" data-i18n="tabEvents" style="left:339px;top:124px;width:150px;height:58px">EVENTOS</button>
+      </div>
+
+      <!-- Aba CONFIGURAÇÃO: composição da arte (3 ajustes, jogador, 3 últimos eventos) -->
+      <div data-pane="config">
+        <span class="t lbl2" style="left:92px;top:195px;width:150px;height:37px" data-i18n="effects">EFEITOS:</span>
+        <button class="t arrow" id="autoDown" aria-label="Ligar ou desligar os efeitos" data-i18n-aria="aFx" style="left:216px;top:192px;width:40px;height:43px"></button>
+        <button class="t setv center" id="autoVal" aria-label="Efeitos" style="left:256px;top:195px;width:125px;height:37px">ON</button>
+        <button class="t arrow" id="autoUp" aria-label="Ligar ou desligar os efeitos" data-i18n-aria="aFx" style="left:396px;top:192px;width:40px;height:43px"></button>
+
+        <span class="t lbl2" style="left:92px;top:239px;width:150px;height:37px" data-i18n="audio">ÁUDIO:</span>
+        <button class="t arrow" data-toggle="audio" aria-label="Ligar ou desligar o som" data-i18n-aria="aSound" style="left:216px;top:236px;width:40px;height:43px"></button>
+        <button class="t setv center" id="audioVal" data-toggle="audio" aria-label="Áudio" style="left:256px;top:239px;width:125px;height:37px">ON</button>
+        <button class="t arrow" data-toggle="audio" aria-label="Ligar ou desligar o som" data-i18n-aria="aSound" style="left:396px;top:236px;width:40px;height:43px"></button>
+
+        <span class="t lbl2" style="left:92px;top:282px;width:150px;height:37px" data-i18n="language">IDIOMA:</span>
+        <button class="t arrow" data-lang-step="-1" aria-label="Idioma anterior" data-i18n-aria="aLangPrev" style="left:216px;top:279px;width:40px;height:43px"></button>
+        <output class="t setv center" id="langVal" aria-label="Idioma" style="left:256px;top:282px;width:125px;height:37px">PORTUGUÊS</output>
+        <button class="t arrow" data-lang-step="1" aria-label="Próximo idioma" data-i18n-aria="aLangNext" style="left:396px;top:279px;width:40px;height:43px"></button>
+
+        <span class="t name" id="playerName" style="left:94px;top:348px;width:118px;height:40px">VOCÊ</span>
+        <span class="t lbl" id="playerRounds" style="left:224px;top:348px;width:150px;height:40px">RODADA 0</span>
+        <span class="t plate2 center" id="playerDemo" style="left:384px;top:355px;width:72px;height:32px">DEMO</span>
+
+        <ol class="mini-log" id="miniLog"></ol>
+      </div>
+
+      <!-- Aba JOGADOR: jogo responsável -->
+      <div class="pane" data-pane="player" hidden>
+        <div class="row"><span data-i18n="sessTime">TEMPO DE SESSÃO</span><b id="sessTime">0 min</b></div>
+        <div class="row"><span data-i18n="rounds">RODADAS</span><b id="sessRounds">0</b></div>
+        <div class="row"><span data-i18n="result">RESULTADO</span><b id="sessNet">R$ 0,00</b></div>
+        <div class="row"><span data-i18n="lossLimit">LIMITE DE PERDA</span><b id="sessLimit">SEM LIMITE</b></div>
+        <div class="row limit"><input id="limitIn" aria-label="Limite de perda em 24 horas (R$)" data-i18n-aria="aLimit" type="number" min="1" step="1" inputmode="numeric" placeholder="R$ limite"><button type="button" id="limitSet" data-i18n="apply">APLICAR</button></div>
+        <p class="note" data-i18n="limitNote">O limite só pode ser reduzido nesta sessão.</p>
+        <button type="button" class="ghost" id="sessionEnd" data-i18n="takeBreak">FAZER UMA PAUSA</button>
+      </div>
+
+      <!-- Aba EVENTOS: registro completo -->
+      <div class="pane" data-pane="events" hidden><ol class="log" id="log"><li class="muted">Nenhum evento ainda.</li></ol></div>
+    </aside>
+
+
+    </div></div>
+    <div class="g" id="g-speed" data-box="6,793,598,269" style="width:598px;height:269px"><div class="gi" style="transform:translate(-6px,-793px)">
+    <!-- Velocímetro e telemetria -->
+    <section aria-label="Painel do carro" data-i18n-aria="aCar">
+      <img class="art" src="assets/hud/speed-telemetry.png" alt="" style="left:6px;top:793px;width:598px;height:269px">
+      <svg class="arc" id="arc" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+      <strong class="t speed center" id="speed" style="left:47px;top:879px;width:171px;height:72px">0</strong>
+      <span class="t lbl center" style="left:69px;top:953px;width:130px;height:28px">KM/H</span>
+      <span class="t lbl tele-l" style="left:319px;top:878px;width:90px;height:28px" data-i18n="fuel">COMBUSTÍVEL</span>
+      <span class="t lbl tele-l" style="left:319px;top:925px;width:90px;height:28px" data-i18n="tires">PNEUS</span>
+      <span class="t lbl tele-l" style="left:319px;top:972px;width:90px;height:28px" data-i18n="hull">LATARIA</span>
+      <div class="segs" id="fuel" style="left:404px;top:883px"></div>
+      <div class="segs" id="tires" style="left:404px;top:930px"></div>
+      <div class="segs" id="hull" style="left:404px;top:977px"></div>
+      <span class="t num2 center" id="fuelN" style="left:540px;top:878px;width:41px;height:30px">—</span>
+      <span class="t num2 center" id="tiresN" style="left:540px;top:925px;width:41px;height:30px">—</span>
+      <span class="t num2 center" id="hullN" style="left:540px;top:972px;width:41px;height:30px">—</span>
+    </section>
+
+
+    </div></div>
+    <!-- Turbo (só visual: não muda o resultado). Mesmas peças e coordenadas do conceito. -->
+    <div class="g" id="g-turbo" data-box="1458,961,419,73" style="width:419px;height:73px"><div class="gi" style="transform:translate(-1458px,-961px)">
+    <section aria-label="Turbo">
+      <img class="art" src="assets/hud/turbo.png" alt="" style="left:1458px;top:961px;width:419px;height:73px">
+      <img class="art" id="turboGlow" src="assets/hud/turbo-on.png" alt="" style="left:1726px;top:962px;width:100px;height:59px">
+      <img class="art" id="turboPlain" src="assets/hud/turbo-off.png" alt="" style="left:1628px;top:967px;width:94px;height:51px">
+      <span class="t lbl center" style="left:1535px;top:970px;width:91px;height:41px">TURBO</span>
+      <span class="t sw center" id="turboOff" style="left:1637px;top:973px;width:76px;height:37px">OFF</span>
+      <span class="t sw center" id="turboOn" style="left:1739.5px;top:973px;width:73px;height:37px">ON</span>
+      <button class="t hit" id="turbo" role="switch" aria-checked="false" aria-label="Turbo" style="left:1458px;top:961px;width:419px;height:73px"></button>
+      <i class="turboFill" id="turboFill" style="left:1640px;top:1014px"></i>
+    </section>
+    </div></div>
+
+    <!-- Rodada compartilhada (Codex, item 11, Figma 68:8827): componentes montados pelo hud.js em unidades do quadro do Codex -->
+    <div class="g c" id="g-phase"></div>
+    <div class="g c" id="g-live"></div>
+    <div class="g c" id="g-bet1"></div>
+    <div class="g c" id="g-bet2"></div>
+    <div class="g c" id="g-toast" aria-live="polite"></div>
+    <div class="g c" id="g-mhead"></div>
+    <div class="g c" id="g-mbal"></div>
+    <div class="g c" id="g-mhist"></div>
+    <div class="g c" id="g-tele"></div>
+    <!-- TURBO no celular (Celio, 14/10: "não estou vendo o turbo no mobile"); no desktop fica no painel do conceito -->
+    <div class="g c" id="g-mturbo"><button type="button" class="m-turbo" id="mTurbo" aria-label="Turbo"><img src="assets/hud/eventos/turbo-activated.png" alt=""><span>TURBO</span></button></div>
+
+    <!-- Rodapé do conceito (só desktop): faixa escura + duas frases com fios, medidas no quadro aprovado -->
+    <div class="foot-band" id="footBand" aria-hidden="true"></div>
+    <div class="g" id="g-foot" data-box="567,1040,789,32" style="width:789px;height:32px" aria-hidden="true"><div class="gi" style="transform:translate(-567px,-1040px)">
+      <i class="fline" style="left:567px;top:1056px;width:97px"></i>
+      <span class="t foot" data-i18n="foot1" style="left:664px;top:1040px;width:588px;height:32px">RISCO / VELOCIDADE / RETIRADA / OVERCRASH</span>
+      <i class="fline" style="left:1252px;top:1056px;width:104px"></i>
+    </div></div>
+    <div class="g" id="g-tag" data-box="1400,1040,476,32" style="width:476px;height:32px" aria-hidden="true"><div class="gi" style="transform:translate(-1400px,-1040px)">
+      <i class="fline" style="left:1400px;top:1056px;width:89px"></i>
+      <span class="t foot" data-i18n="foot2" style="left:1489px;top:1040px;width:295px;height:32px">LEVE A AMBIÇÃO MAIS LONGE</span>
+      <i class="fline" style="left:1784px;top:1056px;width:92px"></i>
+    </div></div>
+  </div>
+  <p class="status" id="status" role="status" hidden></p>
+  <div class="modal" id="modal" hidden><div class="in"><p id="modalText"></p><button type="button" class="again" id="modalOk"><span id="modalBtn">OK</span></button></div></div>
+  <!-- Colisão: camadas do Codex (Figma 62:3517), centradas como no componente "result / perdeu" (1248×702 em 1920×1080) -->
+  <div class="crash" id="crash" hidden aria-live="assertive">
+    <div class="crash-box" id="crashBox">
+      <img class="c-glass" src="assets/crash/vidro-trincado.png" alt="">
+      <img class="c-parts" src="assets/crash/particulas.png" alt="">
+      <img class="c-title" id="crashArt" src="assets/resultado/quebrou-pt.png" alt="">
+      <span class="c-mult" id="crashMult">EM 1,00×</span>
+      <span class="c-cap" id="crashCap" data-i18n="roundOver">RODADA ENCERRADA</span>
+    </div>
+  </div>
+  <div class="fx" id="fx" aria-hidden="true"><div class="fx-speed"></div><div class="fx-red"></div><svg class="fx-cracks" viewBox="0 0 1000 1000" preserveAspectRatio="none"><g id="cracks"></g></svg></div>
+  <!-- Vitória: camadas do Codex (prévia previews/victory-*.png, caixa 960×540; posições medidas nela) -->
+  <div class="result" id="result" hidden aria-live="polite">
+    <div class="rbox" id="winBox">
+      <img class="letter" id="winArt" src="assets/resultado/no-bolso-pt.png" alt="">
+      <div class="wvalue"><strong id="winMain">+R$ 0,00</strong></div>
+      <span class="wtext" id="winText"></span>
+      <button type="button" class="again" id="again"><span data-i18n="again">NOVA CORRIDA</span></button>
+    </div>
+  </div>
+</main>
+<script src="hud.js?v=54"></script>
+</body>
+</html>

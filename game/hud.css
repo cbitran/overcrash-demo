@@ -1,0 +1,423 @@
+/* OverCrash · HUD v3 (Claude). Arte do Codex (PNGs do quadro híbrido do Figma) + textos e indicadores vivos.
+   O palco tem 1920×1080 e é escalado para caber na tela; o vídeo de fundo cobre a tela inteira. */
+:root{
+  --txt:#eae7dd; --mute:#b7b9b8; --amber:#eaaf28; --cyan:#19d7e3; --red:#e8331b; --ink:#0c1010;
+  --label:"Barlow Condensed",sans-serif; --value:"Chakra Petch",sans-serif; --big:"Exo 2",sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:#0b0b0a;overflow:hidden}
+body{font-family:var(--label);color:var(--txt)}
+.game{position:fixed;inset:0;overflow:hidden;background:#0b0b0a}
+#road,.crashVid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:filter .15s}
+.tint{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 60%,transparent 50%,#0b0b0a99 100%)}
+
+.stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+/* Grupos: cada painel é movido inteiro pelo layout (hud.js); por dentro mantém as coordenadas do Figma */
+.g{position:absolute;left:0;top:0;transform-origin:0 0}
+.gi{position:absolute;left:0;top:0}
+.menu{position:absolute;display:none;align-items:center;gap:10px;height:64px;padding:0 22px;border:2px solid #4b5052;cursor:pointer;
+  background:linear-gradient(#24272a,#141617);color:var(--txt);font:700 28px var(--label);letter-spacing:.08em;
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.menu::before{content:"";width:26px;height:18px;background:linear-gradient(var(--txt) 0 3px,transparent 3px 7.5px,var(--txt) 7.5px 10.5px,transparent 10.5px 15px,var(--txt) 15px 18px)}
+.menu[aria-expanded="true"]{border-color:var(--cyan);color:var(--cyan)}
+.backdrop{position:absolute;inset:-4000px;background:#000a;z-index:4}   /* dentro do palco: cobre a tela toda, abaixo do painel aberto */
+.stage .art{position:absolute;display:block;pointer-events:none;user-select:none}
+.title-logo{position:absolute;overflow:hidden;pointer-events:none}
+.title-logo img{position:absolute;display:block;user-select:none}
+.t{position:absolute;margin:0;padding:0;display:flex;align-items:center;white-space:nowrap;line-height:1}
+.center{justify-content:center;text-align:center}
+.right{justify-content:flex-end;text-align:right}
+button.t,.cta,.hit{background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0}
+button:disabled{cursor:default}
+button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+.lbl{font:600 24.1px var(--label);color:var(--mute)}
+.lbl2{font:500 23px var(--label);color:var(--mute)}
+.spaced{font:500 18.4px var(--label);letter-spacing:2.3px}
+.val{font-family:var(--value);font-weight:700}
+.amber{color:var(--amber)}
+.mult{justify-content:center;font:italic 900 119.4px var(--big);letter-spacing:-2.3px;color:var(--txt);text-shadow:0 4px 0 #0008}
+.setv{font:600 24.1px var(--label);color:var(--txt)}
+.name{font:700 26.4px var(--label);color:var(--txt)}
+.plate{justify-content:center;font:700 23px var(--label);color:#171918;background:#a3a5a0;border-radius:2px}
+.plate2{font:700 23px var(--label);color:#202322}
+.speed{font:italic 900 65.4px var(--big);letter-spacing:-1.1px;color:var(--txt)}
+.num2{font:600 24.1px var(--label);color:var(--txt)}
+.sw{font:600 24.1px var(--label);color:#777c79}
+.sw.on{color:var(--cyan)}
+
+/* Abas */
+/* button.tab: mais específico que button.t (font:inherit), senão a aba cai para 16 px */
+button.tab{justify-content:center;font:600 23px var(--label);color:var(--mute)}
+.tab[aria-selected="true"]{color:var(--cyan)}
+.arrow{opacity:.001}
+.arrow:disabled{cursor:default}
+
+/* Últimas quebras: etiquetas de arte por cima das molduras fixas */
+.history{list-style:none;margin:0;padding:0}
+.history li{position:absolute;top:61px;width:98px;height:50px;display:flex;align-items:center;justify-content:center;
+  font:600 28.7px var(--label);background:center/100% 100% no-repeat}
+.history li[data-tier="low"]{color:var(--red);background-image:url(assets/hud/history-01-danger.png)}
+.history li[data-tier="mid"]{color:var(--amber);background-image:url(assets/hud/history-02-amber.png)}
+.history li.empty{color:var(--mute)}
+
+/* Barra do freio automático: 6 segmentos */
+.autobar{position:absolute;display:flex;gap:0;height:15px}
+.autobar i{width:83px;height:15px;transform:skewX(-28deg);margin-right:0;position:relative}
+.autobar i b{position:absolute;inset:2px 3px;background:var(--amber);transform-origin:left;transform:scaleX(0);box-shadow:0 0 8px #eaaf2866}
+
+/* Aposta */
+#chips button{position:absolute;display:flex;align-items:center;justify-content:center;font:600 25.2px var(--label);color:var(--txt);background:none;isolation:isolate}
+/* Acesa: peça chip-25-active do Codex (85×56 no quadro) centrada na moldura + preenchimento âmbar do Figma (vetor 60:3250) */
+#chips button[aria-checked="true"]{color:#111513}
+#chips button[aria-checked="true"]::after{content:"";position:absolute;left:50%;top:50%;width:85px;height:56.3px;transform:translate(-50%,-50%);z-index:-2;
+  background:center/100% 100% no-repeat url(assets/hud/chip-25-active.png)}
+#chips button[aria-checked="true"]::before{content:"";position:absolute;left:50%;top:50%;width:73.5px;height:45.9px;transform:translate(-50%,-50%);z-index:-1;background:#eaaf28;
+  clip-path:polygon(4.6px 0,calc(100% - 4.6px) 0,100% 4.6px,100% calc(100% - 4.6px),calc(100% - 4.6px) 100%,4.6px 100%,0 calc(100% - 4.6px),0 4.6px)}
+#chips button:disabled:not([aria-checked="true"]){color:#6d706e}
+.halo-cover{position:absolute;left:110px;top:598px;width:106px;height:77px;background:#1a1b1c;filter:blur(5px);border-radius:10px;pointer-events:none}
+.release{justify-content:center}
+.release span{margin-left:120px;font:600 31px var(--label);color:var(--txt);width:295px;text-align:center}
+.release:disabled span{color:#6d706e}
+.release:not(:disabled):hover{filter:brightness(1.25)}
+
+/* Velocímetro: arco ativo em segmentos */
+.arc{position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none}
+.arc path{fill:#2a3033;opacity:0}
+.arc path.on{fill:var(--cyan);opacity:1;filter:drop-shadow(0 0 4px #19d7e388)}
+
+/* Telemetria: 10 segmentos */
+.segs{position:absolute;display:flex;gap:1.5px;height:20px}
+.segs i{width:11px;height:20px;transform:skewX(-14deg);background:transparent}
+.segs i.on{background:var(--cyan);box-shadow:0 0 5px #19d7e355}
+.segs.low i.on{background:var(--red);box-shadow:0 0 5px #e8331b66}
+
+/* Botão principal */
+.cta{position:absolute;padding:0;transition:filter .12s,transform .08s}
+.cta img{position:absolute;inset:0;width:100%;height:100%}
+.ctaTitle{justify-content:center;font:italic 900 53.9px var(--label);color:var(--ink)}
+.ctaValue{justify-content:center;font:700 33.3px var(--label);color:var(--ink)}
+.cta:disabled{filter:grayscale(.85) brightness(.55)}
+.cta:not(:disabled):hover{filter:brightness(1.08)}
+.cta:not(:disabled):active{transform:translateY(2px)}
+.hit{position:absolute}
+.turboFill{position:absolute;display:block;width:0;height:3px;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+
+/* Abas JOGADOR e EVENTOS: painel por cima da composição */
+.pane{position:absolute;left:16px;top:182px;width:472px;height:353px;padding:16px 22px;
+  background:linear-gradient(#1b1d1e,#151617);font:600 21px var(--label);color:var(--mute);overflow:auto}
+.pane .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #2c2f30}
+.pane .row b{color:var(--txt);font-weight:600}
+.pane .limit input{width:58%;height:38px;background:#0f1011;border:1px solid #3a3e40;color:var(--txt);font:600 20px var(--label);padding:0 10px}
+.pane .limit button,.pane .ghost{height:38px;padding:0 16px;background:#2a2e30;border:1px solid #474c4f;color:var(--txt);font:700 19px var(--label);letter-spacing:.06em;cursor:pointer}
+.pane .note{margin:8px 0 10px;font-size:17px;color:#8d918f}
+.pane .ghost{width:100%}
+.log,.mini-log{list-style:none;margin:0;padding:0}
+.log li{display:flex;gap:14px;padding:6px 0;border-bottom:1px solid #2a2d2e}
+.log time{color:#8d918f;min-width:52px}
+.log span{color:var(--txt)}
+.log .muted{color:#8d918f}
+.mini-log li{position:absolute;left:44px;width:430px;height:36px;display:flex;align-items:center;font:600 23px var(--label)}
+.mini-log time{width:111px;font-weight:500;color:var(--mute)}
+.mini-log img{position:absolute;left:74.2px;top:4.2px;width:27.6px;height:27.6px}
+.mini-log span{color:var(--mute)}
+.mini-log li:first-child span{color:var(--cyan)}
+
+/* Momentos de impacto (tela inteira) */
+#road.frozen{filter:grayscale(.65) contrast(1.25) brightness(.62)}
+.game.lose #road.frozen{filter:grayscale(.4) contrast(1.3) brightness(.5) sepia(.35) hue-rotate(-20deg) saturate(1.6)}
+.fx{position:absolute;inset:0;pointer-events:none}
+.fx>div,.fx svg{position:absolute;inset:0;width:100%;height:100%;opacity:0}
+.fx-speed{background:repeating-conic-gradient(from 0deg at 50% 52%,transparent 0 2.4deg,#ffffff55 2.4deg 2.7deg,transparent 2.7deg 6deg);
+  -webkit-mask:radial-gradient(ellipse at 50% 52%,transparent 22%,#000 70%);mask:radial-gradient(ellipse at 50% 52%,transparent 22%,#000 70%)}
+.fx-red{background:radial-gradient(ellipse at 50% 50%,#e8331b33,#e8331b88)}
+.fx-cracks path{fill:none;stroke:#f3efe4;stroke-width:2.2;stroke-linecap:round;filter:drop-shadow(1px 1px 0 #000)}
+.fx.speed .fx-speed{animation:lines .9s ease-out}
+.fx.win .fx-speed{animation:lines 1.2s ease-out}
+.fx.lose .fx-red{animation:redhold 1.8s ease-out forwards}
+.fx.lose .fx-cracks{opacity:1}
+.fx.lose .fx-cracks path{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:crack .2s ease-out forwards}
+@keyframes lines{0%{opacity:0;transform:scale(1.12)}25%{opacity:1}100%{opacity:0;transform:scale(1)}}
+@keyframes redhold{0%{opacity:1}100%{opacity:.55}}
+@keyframes crack{to{stroke-dashoffset:0}}
+.game.shake .stage{animation:shake .45s}
+@keyframes shake{15%{translate:-8px 5px}30%{translate:7px -6px}45%{translate:-5px 3px}60%{translate:4px -2px}80%{translate:-2px 1px}}
+
+/* Vitória (camadas do Codex): caixa de 960×540; posições medidas na prévia previews/victory-pt.png */
+.result{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 42%,#0b0b0a99 0%,#0b0b0ad9 70%);animation:dim .3s ease-out both}
+@keyframes dim{from{opacity:0}to{opacity:1}}
+.rbox{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0}
+.rbox .letter{position:absolute;left:29.4px;top:-99.9px;width:900px;height:506.6px;animation:slam .34s cubic-bezier(.2,1.5,.45,1) .04s both}
+.wvalue{position:absolute;left:159px;top:217px;width:643px;height:117px;display:flex;align-items:center;justify-content:center;animation:capIn .3s ease-out .2s both;
+  border-style:solid;border-width:0;border-image:url(assets/hud/mult-frame.png) 14 80 14 80 fill / 16px 92px stretch}
+.wvalue strong{font:700 58px var(--value);color:var(--amber)}
+.wtext{position:absolute;left:150px;top:356px;width:660px;height:36px;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;font:700 max(30px,calc(13px / var(--rs,1))) var(--label);color:#f2e5ce;
+  text-shadow:0 2px 6px #000;animation:capIn .3s ease-out .32s both}
+.again{position:absolute;left:290px;top:442px;width:380px;height:62px;border:0;padding:0;cursor:pointer;pointer-events:auto;
+  background:center/100% 100% no-repeat url(assets/hud/button-neutral.png);animation:capIn .3s ease-out .45s both;
+  transform-origin:50% 0;scale:max(1,calc(44 / (62 * var(--rs,1))))}
+.again span{font:700 30px var(--label);color:#f2e5ce}
+.again:hover{filter:brightness(1.25)}
+.status{display:none}
+
+/* Rodapé do conceito (só desktop) */
+.foot-band{position:absolute;height:52px;z-index:-1;pointer-events:none;border-top:1px solid #ffffff1f;
+  background:linear-gradient(#0b0b0a99,#0b0b0acc)}
+.foot{justify-content:center;font:600 16.5px var(--label);letter-spacing:.42em;color:var(--mute)}
+.fline{position:absolute;display:block;height:1px;background:#8d918f80}
+
+/* Colisão (arte do Codex): vidro, partículas e letreiro entram por camadas e ficam até a próxima corrida */
+.crash{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,transparent 30%,#6e0b0480 75%,#3a0502c0 100%);transition:opacity .25s}
+.crash.out{opacity:0}
+.crash-box{position:absolute;left:0;top:0;width:1248px;height:702px;transform-origin:0 0}
+.crash-box img{position:absolute;inset:0;width:100%;height:100%}
+.c-glass{opacity:.75;animation:glassIn .16s ease-out both}
+.c-parts{animation:partsOut 1.3s cubic-bezier(.15,.8,.3,1) both}
+.c-title{animation:slam .34s cubic-bezier(.2,1.5,.45,1) .04s both}
+.c-title-text{position:absolute;left:0;right:0;top:215px;text-align:center;font:italic 900 168px/1 var(--big);letter-spacing:-2px;color:#e8331b;
+  -webkit-text-stroke:5px #1a0503;paint-order:stroke fill;text-shadow:0 8px 0 #3a0905,0 0 40px #000;animation:slam .34s cubic-bezier(.2,1.5,.45,1) .04s both}
+.c-mult,.c-cap{position:absolute;left:174px;width:900px;text-align:center;font-family:var(--label);font-weight:600;color:#f2e8d4;text-shadow:0 2px 6px #000;animation:capIn .3s ease-out .32s both}
+.c-mult{top:490px;height:60px;font-size:42px;letter-spacing:5px;line-height:60px}
+.c-cap{top:549px;height:60px;font-size:24px;letter-spacing:3px;line-height:60px}
+.crash.shake .crash-box{animation:boxShake .4s .05s}
+@keyframes glassIn{0%{opacity:0;transform:scale(1.18)}100%{opacity:.75;transform:scale(1)}}
+@keyframes partsOut{0%{opacity:0;transform:scale(.45)}12%{opacity:1}100%{opacity:.85;transform:scale(1.04)}}
+@keyframes slam{0%{opacity:0;transform:scale(2.3)}60%{opacity:1}100%{opacity:1;transform:scale(1)}}
+@keyframes capIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+@keyframes boxShake{20%{translate:-14px 8px}40%{translate:11px -9px}60%{translate:-7px 5px}80%{translate:4px -2px}}
+
+@media (prefers-reduced-motion:reduce){.fx>div,.fx svg,.result *,.crash *{animation:none!important}}
+
+/* ================= Rodada compartilhada (Codex, item 11, Figma 68:8827) =================
+   Componentes em unidades do quadro do Codex; o layout (hud.js) escala o grupo inteiro. */
+.g.c{pointer-events:none}
+.g.c > *{pointer-events:auto}
+.g.c .bg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;user-select:none}
+.g.c [data-fit]{white-space:nowrap;overflow:hidden}
+
+/* Aposta */
+.b-top{position:absolute;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.b-ttl{font:700 12px var(--label);letter-spacing:.04em;color:var(--txt)}
+.b-st{font:600 11px var(--label);letter-spacing:.04em;color:var(--mute);text-align:right}
+.b-st-placed,.b-st-running{color:var(--txt)}
+.b-st-won{color:var(--cyan)}
+.b-st-lost{color:var(--red)}
+.field{position:absolute;border-style:solid;border-width:0;border-image:url(assets/rodada/input.png) 22 fill / 11px stretch}
+.f-l{position:absolute;left:10px;top:5px;font:600 11px var(--label);letter-spacing:.03em;color:var(--mute)}
+.f-v{position:absolute;left:10px;bottom:4px;right:34px;height:22px;display:flex;align-items:center;font:700 18px var(--value);color:var(--txt);background:none;border:0;padding:0}
+.f-v.amber{color:var(--amber);right:10px}
+.f-in{width:auto;outline:none;cursor:text}
+.f-in:disabled{cursor:default;color:var(--txt)}
+.f-in:focus{color:var(--amber)}
+.f-on{position:absolute;right:6px;bottom:3px;min-width:28px;height:24px;padding:0 4px;border:0;background:none;cursor:pointer;font:700 11px var(--label);color:#6d706e}
+.f-on.on{color:var(--cyan)}
+.f-on:disabled{cursor:default}
+.chip{position:absolute;display:flex;align-items:center;justify-content:center;cursor:pointer;font:600 12px var(--label);color:var(--txt);
+  border-style:solid;border-width:0;border-image:url(assets/rodada/input.png) 22 fill / 9px stretch;background:none;padding:0}
+.chip.sel{color:var(--amber);box-shadow:inset 0 2px 0 var(--amber)}
+.chip:disabled{cursor:default;color:#6d706e}
+.chip.sel:disabled{color:#b88a22}
+.b-act{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;padding:0 10px;
+  border-style:solid;border-width:0;border-image:url(assets/rodada/action-neutral.png) 30 fill / 12px stretch;background:none;color:var(--txt)}
+.b-act .a1{max-width:100%;font:700 16px var(--label);letter-spacing:.04em}
+.b-act .a2{font:700 15px var(--value);color:var(--amber)}
+.b-act.cash{border-image:url(assets/rodada/action-cashout.png) 30 fill / 12px stretch;color:var(--ink)}
+.b-act.cash .a1{font:italic 900 17px var(--label)}
+.b-act.cash .a2{color:var(--ink)}
+.b-act:disabled{cursor:default}
+.b-act:disabled .a1{color:#9a9d9a}
+.b-act:not(:disabled):hover{filter:brightness(1.12)}
+.b-act:not(:disabled):active{transform:translateY(1px)}
+.g[data-state="won"] .b-act .a1{color:var(--txt)}
+
+/* Fase: contagem de 8 s ou multiplicador da rodada */
+.p-big{position:absolute;display:flex;align-items:center;justify-content:center;font:italic 900 78px/1 var(--big);letter-spacing:-1.5px;color:var(--txt);text-shadow:0 3px 0 #0008}
+.p-big.sm{font-size:30px;letter-spacing:-.5px}
+.p-big.crashed{color:var(--red)}
+.p-lbl,.p-sub{position:absolute;display:flex;align-items:center;justify-content:center;font:600 11px var(--label);letter-spacing:.06em;color:var(--txt)}
+.p-sub{font-size:9px;color:var(--mute)}
+.p-segs{position:absolute;display:flex;gap:3px}
+.p-segs i{flex:1;background:#2a2d2e;transform:skewX(-20deg)}
+.p-segs i.on{background:var(--amber);box-shadow:0 0 6px #eaaf2866}
+
+/* Apostas ao vivo (só dados reais; sem jogadores falsos) */
+.l-ttl{position:absolute;font:700 12px var(--label);letter-spacing:.04em;color:var(--txt)}
+.l-n{position:absolute;font:700 12px var(--value);color:var(--amber)}
+.l-h{position:absolute;font:600 10px var(--label);letter-spacing:.04em;color:var(--mute)}
+.l-rows{position:absolute;overflow-y:auto;scrollbar-width:thin}
+.l-row{position:relative;border-top:1px solid #ffffff12}
+.l-row span{position:absolute;top:50%;transform:translateY(-50%);font:600 12px var(--label);color:var(--txt)}
+.l-row.out span:nth-child(3),.l-row.out span:nth-child(4){color:var(--cyan)}
+.l-empty,.l-empty2{position:absolute;text-align:center;font:700 11px var(--label);letter-spacing:.04em;color:var(--mute)}
+.l-empty2{font-weight:500;letter-spacing:0}
+
+/* Aviso pequeno de vitória: ~2 s, sem parar o carro nem escurecer a tela */
+#g-toast{opacity:0;transition:opacity .25s}
+#g-toast.show{opacity:1;animation:toastIn .3s cubic-bezier(.2,1.3,.4,1)}
+@keyframes toastIn{from{translate:0 -10px}to{translate:0 0}}
+.w-t{position:absolute;font:italic 900 15px var(--label);letter-spacing:.02em;color:var(--txt)}
+.w-s{position:absolute;font:600 10px var(--label);letter-spacing:.03em;color:var(--mute)}
+.w-v{position:absolute;font:700 22px var(--value);color:var(--amber)}
+
+/* Celular: cabeçalhos e telemetria na faixa do Codex (9 fatias) */
+#g-mhead,#g-mbal,#g-mhist,#g-tele{border-style:solid;border-width:0;border-image:url(assets/rodada/faixa.png) 36 fill / 12px stretch}
+.m-l{position:absolute;font:600 11px var(--label);letter-spacing:.03em;color:var(--mute)}
+.m-bal{position:absolute;font:700 16px var(--value);color:var(--amber)}
+.m-bal.big{font-size:19px}
+.m-hist{position:absolute;display:flex;gap:7px;overflow:hidden;white-space:nowrap}
+.m-hist b{font:700 11px var(--label)}
+.m-hist b.low{color:var(--red)}
+.m-hist b.mid{color:var(--amber)}
+.m-menu{position:absolute;display:flex;align-items:center;justify-content:center;cursor:pointer;font:700 11px var(--label);letter-spacing:.06em;color:var(--txt);
+  background:#ffffff08;border:1px solid #ffffff1c}
+#g-tele{display:flex;align-items:center;justify-content:space-around;padding:0 6px}
+.t-s{font:700 11px var(--label);color:var(--txt)}
+.t-k{font:600 11px var(--label);color:var(--cyan)}
+.t-k b{font-weight:700}
+
+/* Mensagens */
+.status{display:block;position:absolute;left:50%;bottom:12%;transform:translateX(-50%);margin:0;padding:10px 18px;max-width:90vw;
+  background:#0e0f0fe6;border:1px solid #4b5052;font:600 15px var(--label);letter-spacing:.03em;color:var(--txt);text-align:center;z-index:20}
+.modal{position:absolute;inset:0;display:grid;place-items:center;background:#000a;z-index:30}
+.modal .in{width:min(440px,90vw);padding:22px;background:#151617;border:1px solid #4b5052;text-align:center}
+.modal p{margin:0 0 16px;font:600 18px/1.4 var(--label);color:var(--txt)}
+.modal .again{position:static;width:100%;height:52px;scale:1;animation:none}
+
+/* EFEITOS desligados (painel lateral): sem tremor, flash vermelho, vidro e linhas de velocidade */
+/* EFEITOS OFF: só tremor, flash e linhas de velocidade. O vidro e os fragmentos do QUEBROU ficam sempre (Celio, 14/10) */
+.game.no-fx .fx{display:none}
+.game.no-fx .crash{background:none}
+button.setv{background:none;border:0;cursor:pointer;padding:0;font:600 24.1px var(--label);color:var(--txt)}
+
+/* Celular em pé: aposta recolhida, aposta mínima na corrida e lista ao vivo recolhida */
+.b-open .a1{font:700 17px var(--label);letter-spacing:.06em;color:var(--txt)}
+.b-mini-ttl{position:absolute;left:4px;right:4px;top:0;height:18px;display:flex;justify-content:space-between;align-items:center}
+.b-mini-ttl span:first-child{font:700 13px var(--label);letter-spacing:.04em;color:var(--txt);text-shadow:0 1px 3px #000}
+.b-mini-ttl .b-st{text-shadow:0 1px 3px #000}
+.live-bar{position:absolute;display:flex;align-items:center;gap:8px;padding:0 12px;cursor:pointer;color:var(--txt);background:none;
+  border-style:solid;border-width:0;border-image:url(assets/rodada/faixa.png) 36 fill / 10px stretch}
+.live-bar .l-ttl,.live-bar .l-n{position:static}
+.live-bar .l-arrow{margin-left:auto;font-size:12px;color:var(--mute)}
+.l-close{position:absolute;background:none;border:0;cursor:pointer;color:var(--mute);font-size:12px}
+/* EFEITOS OFF também tira a animação de entrada dos letreiros (quebra e vitória) */
+.game.no-fx .result *,.game.no-fx #g-toast{animation:none!important}
+.game.no-fx #road.frozen{filter:none}
+
+/* Apostas ao vivo no desktop: secundárias, apagadas; acendem com o mouse em cima (Celio, 14/10) */
+#g-live.dim{opacity:.85;transition:opacity .2s}
+/* Desktop: letras maiores para dar para ler (Celio, 14/10); o painel continua secundário (menor e um pouco apagado) */
+#g-live.dim .l-ttl,#g-live.dim .l-n{font-size:16px}
+#g-live.dim .l-h{font-size:15px}
+#g-live.dim .l-row span{font-size:17px}
+#g-live.dim .l-empty{font-size:15px}
+#g-live.dim .l-empty2{font-size:14px}
+#g-live.dim:hover{opacity:1}
+.game.menu-open .crash,.game.menu-open .result{visibility:hidden}
+
+/* Ajustes do Jev (14/10): textos do celular em pé maiores; sem "RODADA ENCERRADA" sob o QUEBROU no celular */
+.p-lbl.m{font-size:13px}
+.game[data-layout=portrait] .m-l{font-size:12.5px}
+.game[data-layout=portrait] .m-bal{font-size:18px}
+.game[data-layout=portrait] .m-hist{gap:6px}
+.game[data-layout=portrait] .m-hist b{font-size:12.5px}
+.game[data-layout=portrait] .m-menu{font-size:12.5px}
+.game[data-layout=portrait] .b-ttl{font-size:14px}
+.game[data-layout=portrait] .b-st{font-size:12.5px}
+.game[data-layout=portrait] .f-l{font-size:12.5px}
+.game[data-layout=portrait] .f-on{font-size:12.5px}
+.game[data-layout=portrait] .chip{font-size:13.5px}
+.game[data-layout=portrait] #crashCap{display:none}
+.b-x{flex:none;width:24px;height:22px;margin-left:6px;border:1px solid #ffffff2a;background:#ffffff0a;color:var(--txt);font:700 16px/1 var(--label);cursor:pointer}
+.b-x:hover{background:#ffffff1a}
+.b-mini-ttl .b-x{height:18px;width:22px;font-size:14px;vertical-align:middle}
+/* Desktop: painel de aposta embaixo do carro (78% do tamanho) com números e rótulos maiores (Celio, 14/10: "números pequenos") */
+.game[data-layout=desktop] .chip{font-size:18px}
+.game[data-layout=desktop] .f-l{font-size:14px;top:3px}
+.game[data-layout=desktop] .f-v{font-size:21px}
+.game[data-layout=desktop] .f-on{font-size:14px}
+.game[data-layout=desktop] .b-ttl{font-size:15px}
+.game[data-layout=desktop] .b-st{font-size:14px}
+.game[data-layout=desktop] .b-act .a1{font-size:19px}
+.game[data-layout=desktop] .b-act .a2{font-size:18px}
+
+/* TURBO no celular: botão na faixa do Codex; aceso enquanto o turbo dura */
+#g-mturbo{pointer-events:auto}
+.m-turbo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 8px;
+  border-style:solid;border-width:0;border-image:url(assets/rodada/faixa.png) 36 fill / 12px stretch;background:none;
+  font:700 14px var(--label);letter-spacing:.06em;color:var(--txt)}
+.m-turbo img{width:22px;height:22px;object-fit:contain}
+.m-turbo.on{color:var(--cyan);filter:drop-shadow(0 0 6px #19d3ff99)}
+.m-turbo:active{transform:translateY(1px)}
+
+/* Saldo rodando ao ganhar + "+R$ X" ao lado (Celio, 14/10) */
+.rolling{color:#ffd76a!important;text-shadow:0 0 12px #eaaf2899}
+.gain{position:fixed;z-index:40;pointer-events:none;transform:translateY(-50%);font:800 16px var(--value);color:#39e07a;
+  text-shadow:0 1px 2px #000,0 0 10px #39e07a66;white-space:nowrap;animation:gainUp 2.6s ease-out forwards}
+@keyframes gainUp{0%{opacity:0;transform:translateY(-20%) scale(.8)}12%{opacity:1;transform:translateY(-50%) scale(1.08)}22%{transform:translateY(-50%) scale(1)}
+  75%{opacity:1;transform:translateY(-90%)}100%{opacity:0;transform:translateY(-140%)}}
+
+/* ===================== ESCALA TIPOGRÁFICA ÚNICA (auditoria de acessibilidade, 14/10/2026; OK do Celio) =====================
+   Degraus em px REAIS na tela. Desktop 1920 (em 1440 tudo × 0,75):  E1 64 · E2 32 · E3 24 · E4 19 · E5 16.
+   Celular (em pé e deitado):                                          E1 30 · E2 19 · E3 16 · E4 13 · E5 12.
+   Valor no CSS = px real ÷ escala do grupo (fase e aviso: 1,148; ao vivo desktop: 1,033; aposta em pé: 0,88;
+   MENU em pé: 0,766, deitado: 0,882). O painel de aposta do DESKTOP fica para a arte nova do Codex (item 13). */
+/* desktop, grupos do palco (escala 1) */
+.lbl,.lbl2{font-size:19px}
+.tele-l{font-size:18px}                 /* COMBUSTÍVEL não cabe em 19 na caixa de 90 (vizinho da barra); os três iguais */
+.plate,.plate2{font-size:19px}
+.plate2{color:#0b0c0c}                  /* contraste da placa DEMO (era 2,99:1) */
+.name,.num2,.sw,.setv,button.tab{font-size:24px}
+.history li{font-size:24px}
+.speed{font-size:64px}
+.mini-log li{font-size:19px}
+.foot{font-size:16px}
+/* fase e aviso de vitória no desktop (grupo × 1,148) */
+.game[data-layout=desktop] .p-big:not(.sm){font-size:55.7px}
+.game[data-layout=desktop] .p-lbl{font-size:16.5px}
+.game[data-layout=desktop] .w-v{font-size:27.9px}
+.game[data-layout=desktop] .w-t{font-size:16.5px}
+.game[data-layout=desktop] .w-s{font-size:13.9px}
+/* apostas ao vivo no desktop (grupo × 1,033) */
+#g-live.dim .l-ttl,#g-live.dim .l-n,#g-live.dim .l-row span,#g-live.dim .l-empty{font-size:18.4px}
+#g-live.dim .l-h{font-size:15.5px}
+/* celular: cabeçalho, ao vivo, telemetria, turbo, aviso */
+.game:not([data-layout=desktop]) .m-l,.game:not([data-layout=desktop]) .m-hist b,.game:not([data-layout=desktop]) .m-menu{font-size:13px}
+.game:not([data-layout=desktop]) .m-bal,.game:not([data-layout=desktop]) .m-bal.big{font-size:19px}
+.m-hist b.low{color:#ff5a40}            /* contraste do vermelho no celular (era 3,95:1) */
+.game:not([data-layout=desktop]) .l-ttl,.game:not([data-layout=desktop]) .l-n{font-size:13px}
+.game:not([data-layout=desktop]) .l-h,.game:not([data-layout=desktop]) .l-row span{font-size:12px}
+.game:not([data-layout=desktop]) .t-s,.game:not([data-layout=desktop]) .t-k{font-size:12px}
+.m-turbo{font-size:16px}
+.game:not([data-layout=desktop]) .w-v{font-size:19px}
+.game:not([data-layout=desktop]) .w-t{font-size:16px}
+.game:not([data-layout=desktop]) .w-s{font-size:12px}
+/* aposta no celular em pé (grupo × 0,88) */
+.game[data-layout=portrait] .b-ttl,.game[data-layout=portrait] .b-mini-ttl span:first-child{font-size:14.8px}
+.game[data-layout=portrait] .b-st,.game[data-layout=portrait] .f-l,.game[data-layout=portrait] .f-on{font-size:13.6px}
+.game[data-layout=portrait] .f-v,.game[data-layout=portrait] .chip,.game[data-layout=portrait] .b-act .a1{font-size:18.2px}
+.game[data-layout=portrait] .b-act .a2{font-size:21.6px}
+.game:not([data-layout=desktop]) .b-act .a1,.game:not([data-layout=desktop]) .b-act .a2{line-height:1}   /* RETIRAR cabia cortado 3 px */
+/* aposta no celular deitado (grupo × 1) */
+.game[data-layout=compact] .b-ttl{font-size:13px}
+.game[data-layout=compact] .b-st,.game[data-layout=compact] .f-l,.game[data-layout=compact] .f-on{font-size:12px}
+.game[data-layout=compact] .f-v,.game[data-layout=compact] .chip,.game[data-layout=compact] .b-act .a1{font-size:16px}
+.game[data-layout=compact] .b-act .a2{font-size:19px}
+/* MENU no celular (em pé × 0,766; deitado × 0,882) */
+.game[data-layout=portrait] button.tab,.game[data-layout=portrait] .setv,.game[data-layout=portrait] .name,.game[data-layout=portrait] .num2,.game[data-layout=portrait] .sw{font-size:20.9px}
+.game[data-layout=portrait] .lbl2,.game[data-layout=portrait] .mini-log li,.game[data-layout=portrait] .plate2{font-size:17px}
+.game[data-layout=compact] button.tab,.game[data-layout=compact] .setv,.game[data-layout=compact] .name,.game[data-layout=compact] .num2,.game[data-layout=compact] .sw{font-size:18.1px}
+.game[data-layout=compact] .lbl2,.game[data-layout=compact] .mini-log li,.game[data-layout=compact] .plate2{font-size:14.7px}
+
+/* contraste do ON/OFF da retirada automática: apagado só quando desabilitado (era 3,65:1) */
+.f-on{color:var(--mute)}
+.f-on:disabled{color:#6d706e}
+.f-on.on{color:var(--cyan)}
+/* foco visível nas setas do MENU (antes opacity .001 escondia também o contorno) */
+.arrow{opacity:1;color:transparent;background:transparent}
+/* alvos de toque maiores sem mudar o desenho: área invisível em volta */
+.f-on::after,.b-x::after,.l-close::after,.arrow::after{content:"";position:absolute;inset:-10px}
+.b-x,.l-close{position:relative}
+.game:not([data-layout=desktop]) .l-empty{font-size:12px}
+.game:not([data-layout=desktop]) .t-k b{font-size:12px}
+.game:not([data-layout=desktop]) #crashCap{display:none}   /* "RODADA ENCERRADA" repete o QUEBROU; no celular deitado ficava com 9 px */
