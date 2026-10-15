@@ -421,3 +421,13 @@ button.setv{background:none;border:0;cursor:pointer;padding:0;font:600 24.1px va
 .game:not([data-layout=desktop]) .l-empty{font-size:12px}
 .game:not([data-layout=desktop]) .t-k b{font-size:12px}
 .game:not([data-layout=desktop]) #crashCap{display:none}   /* "RODADA ENCERRADA" repete o QUEBROU; no celular deitado ficava com 9 px */
+
+/* Fundo do vídeo: a capa aparece enquanto o vídeo não carregou (iPhone abre o vídeo só depois do primeiro toque) */
+#road{background:#0b0b0a url(assets/video/capa-retrato.jpg?v=4) center/cover no-repeat}
+@media (min-aspect-ratio:5/4){#road{background-image:url(assets/video/capa-paisagem.jpg?v=4)}}
+/* Portão de início */
+.gate{position:absolute;inset:0;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border:0;cursor:pointer;
+  background:radial-gradient(ellipse at 50% 55%,#0b0b0acc 0%,#0b0b0aee 100%);color:#efe8de;font-family:var(--label);-webkit-tap-highlight-color:transparent}
+.gate-k{font-size:14px;letter-spacing:.2em;color:#e3b02a;font-weight:600}
+.gate-t{font-size:36px;white-space:nowrap;font-weight:700;letter-spacing:.06em;background:#e3b02a;color:#121417;padding:14px 38px}
+.gate-s{font-size:18px;letter-spacing:.18em;color:#b9b4ac}

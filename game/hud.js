@@ -8,7 +8,8 @@ const $ = id => document.getElementById(id);
 const game = $('game'), video = $('road'), stage = $('stage');
 // Uma cena por tipo de quebra (o servidor só revela o tipo na quebra; as três ficam pré-carregadas).
 const CRASH_VIDS = Object.fromEntries([...document.querySelectorAll('.crashVid')].map(v => [v.dataset.hazard, v]));
-const VID_V = 'v=3';                                       // muda a cada novo render dos vídeos (o navegador guarda os antigos)
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const VID_V = 'v=4';                                       // muda a cada novo render dos vídeos (o navegador guarda os antigos)
 const CRASH_FILE = { wall: 'quebra', cliff: 'queda-asfalto', bridge: 'queda-ponte' };
 const CRASH_IMPACT = 0.4;              // segundos do vídeo de quebra até o impacto (cena-batida.py: 12 quadros a 30 fps)
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -558,6 +559,7 @@ function layout() {
   }
   // Vídeo da quebra no mesmo formato (o tipo de quebra da rodada pode trocar o arquivo quando houver as três cenas).
   for (const [hz, cv] of Object.entries(CRASH_VIDS)) {
+    if (IOS && hz !== 'wall') continue;
     const src = `assets/video/${CRASH_FILE[hz]}-${portrait ? 'retrato' : 'paisagem'}.mp4?${VID_V}`;
     if (cv.dataset.src === src) continue;
     cv.dataset.src = src; cv.dataset.ok = '0'; cv.src = src;
@@ -897,7 +899,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ================= Quadro a quadro =================
-let last = performance.now(), lastPhaseKey = '';
+let last = performance.now(), lastPhaseKey = '', lastPlayTry = 0;
 function frame(t) {
   const dt = Math.min(.25, Math.max(0, (t - last) / 1000)); last = t;
   const r = S.round, running = r?.status === 'running';
@@ -906,8 +908,8 @@ function frame(t) {
   const stopped = running && stoppedRound === r.id;
   const target = running && !stopped ? Math.min(250, 140 + elapsed * 7) + (turbo ? 45 : 0) : 0;
   speed += (target - speed) * (1 - Math.exp(-dt * (stopped ? 1.8 : running ? 1.6 : 4)));
-  if (running && !stopped && video.paused && !video.classList.contains('frozen')) video.play().catch(() => {});
-  if (running) { const pr = Math.round(Math.max(.5, Math.min(1.8, speed / 170)) * 20) / 20; if (Math.abs(video.playbackRate - pr) >= .05) video.playbackRate = pr; } // iOS trava se a velocidade muda todo quadro
+  if (running && !stopped && video.paused && !video.classList.contains('frozen') && t - lastPlayTry > 400) { lastPlayTry = t; video.play().catch(() => {}); }
+  if (running) { const stp = IOS ? 4 : 20, pr = Math.round(Math.max(IOS ? .75 : .5, Math.min(IOS ? 1.5 : 1.8, speed / 170)) * stp) / stp; if (Math.abs(video.playbackRate - pr) >= 1 / stp - 1e-6) video.playbackRate = pr; } // iOS trava se a velocidade muda todo quadro
   if (stopped && speed < 3 && !video.paused) video.pause();
   $('speed').textContent = Math.round(speed); SFX.engineSpeed(speed);
   if ($('tSpeed')) $('tSpeed').textContent = Math.round(speed) + ' KM/H';
@@ -940,5 +942,14 @@ if (DEMO) {
   const sc = document.createElement('script'); sc.src = 'demo-local.js?v=2'; sc.onload = connect; document.head.appendChild(sc);
 } else if (!TOKEN) modal(T('noServer'), 'OK');
 else connect();
+{ const gate = $('startGate');
+  if (gate) gate.addEventListener('pointerup', e => {
+    e.preventDefault(); e.stopPropagation(); gate.remove();
+    try { SFX.init(); } catch {}
+    video.muted = true;
+    const p = video.play(); const idle = () => { if (S.round?.status !== 'running') { video.pause(); try { video.currentTime = 2; } catch {} } };
+    if (p && p.then) p.then(idle).catch(() => {}); else idle();
+  }, { once: true });
+}
 window.overcrashHUD = { S, layout, renderAll, onMessage, som: () => SFX.estado(), setLang: l => { if (LANGS.includes(l)) { lang = l; applyLang(); } } };
 })();
