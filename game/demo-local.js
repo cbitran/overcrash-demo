@@ -9,7 +9,7 @@
 (() => {
   'use strict';
   const CFG = {
-    houseEdge: 0.03, growthRate: 0.083, maxMultiplier: 1000, bettingSeconds: 8, crashPauseSeconds: 3,
+    houseEdge: 0.03, growthRate: 0.07, maxMultiplier: 1000, bettingSeconds: 8, crashPauseSeconds: 3,
     stakeOptions: [1000, 2500, 5000, 10_000, 25_000], minStake: 100, maxStake: 100_000, initialBalance: 125_000,
   };
   const CUR = (new URLSearchParams(location.search).get('currency') || 'USD').toUpperCase().slice(0, 3);   // ?currency=BRL

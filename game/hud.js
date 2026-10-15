@@ -103,6 +103,8 @@ const S = {
   offset: 0, online: false, roundWins: [],
 };
 function newSlot() { return { stake: null, autoOn: false, auto: 2, bet: null, busy: false }; }
+// Demo: a aposta 1 já nasce com retirada automática em 1,50× (≈65% de chance de ganhar); o visitante pode desligar ou mudar.
+if (DEMO) { S.slots[1].autoOn = true; S.slots[1].auto = 1.5; }
 const now = () => Date.now() + S.offset;          // relógio do servidor
 const cents = v => v / 100;
 
@@ -939,7 +941,7 @@ document.fonts && document.fonts.ready.then(() => document.querySelectorAll('.st
 requestAnimationFrame(frame);
 if (DEMO) {
   // a demo só é carregada quando pedida: no jogo com dinheiro real este arquivo nem é baixado
-  const sc = document.createElement('script'); sc.src = 'demo-local.js?v=2'; sc.onload = connect; document.head.appendChild(sc);
+  const sc = document.createElement('script'); sc.src = 'demo-local.js?v=3'; sc.onload = connect; document.head.appendChild(sc);
 } else if (!TOKEN) modal(T('noServer'), 'OK');
 else connect();
 { const gate = $('startGate');
