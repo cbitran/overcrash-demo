@@ -1,4 +1,4 @@
-/* OverCrash · HUD v5 (Claude). Rodada compartilhada, ligada ao servidor (logic/backend).
+/* OverCrash · HUD v5 (Claude). Rodada compartilhada como no Aviator, ligada ao servidor (logic/backend).
    O servidor decide tudo (rodada, ponto de falha, saldo, liquidação); o HUD só apresenta e pede.
    Arte: conceito aprovado (Figma 51:2715) e peças do Codex: placa (item 9), eventos (item 10), rodada compartilhada (item 11, 68:8827).
    Endereço: ?server=http://127.0.0.1:8780&token=<sessão aberta pelo operador>&lang=pt|en|es */
@@ -233,7 +233,7 @@ function onRoundStarted(round) {
   S.round = round; t0Round = performance.now();
   const mine = [1, 2].some(n => S.slots[n].bet?.status === 'placed' || S.slots[n].bet?.status === 'running');
   if (mine) log('evStart');
-  speed = 40; video.playbackRate = .4; video.play().catch(() => {});
+  speed = 40; video.playbackRate = .5; video.play().catch(() => {});
   if (SFX.ready()) { SFX.engineStart(); SFX.play('rev', .5); }
   renderAll();
 }
@@ -340,7 +340,7 @@ let fmt = 'desktop';
 let liveOpen = false, bet2Open = false;
 const racingNow = () => S.round?.status === 'running' || S.round?.status === 'crashed';
 function betMode(n) {
-  // A APOSTA 2 é do mesmo jogador (duas apostas na rodada); fica escondida até ele abrir pelo "+" (Celio, 14/10).
+  // A APOSTA 2 é do mesmo jogador (duas apostas na rodada, como no Aviator); fica escondida até ele abrir pelo "+" (Celio, 14/10).
   if (n === 2 && !bet2Open && !S.slots[2].bet) return 'closed';
   if (fmt !== 'portrait') return 'full';
   return racingNow() ? 'mini' : 'full';
@@ -549,7 +549,7 @@ function layout() {
   game.dataset.layout = mode;
   // Vídeo: a menor versão que ainda fica nítida nesta tela; se não existir, o vídeo único.
   const portrait = mode === 'portrait', px = vw * Math.min(devicePixelRatio || 1, 2);
-  const shot = portrait ? (px <= 800 ? 'retrato-720' : 'retrato-1080') : (px <= 1400 ? 'paisagem-1280' : px <= 2100 ? 'paisagem-1920' : 'paisagem-2560');
+  const shot = portrait ? (px <= 1100 ? 'retrato-720' : 'retrato-1080') : (px <= 1400 ? 'paisagem-1280' : px <= 2100 ? 'paisagem-1920' : 'paisagem-2560');
   if (video.dataset.shot !== shot) {
     const t = video.currentTime, playing = !video.paused; video.dataset.shot = shot;
     video.poster = `assets/video/capa-${portrait ? 'retrato' : 'paisagem'}.jpg?${VID_V}`; video.src = `assets/video/corrida-${shot}.mp4?${VID_V}`;
@@ -907,7 +907,7 @@ function frame(t) {
   const target = running && !stopped ? Math.min(250, 140 + elapsed * 7) + (turbo ? 45 : 0) : 0;
   speed += (target - speed) * (1 - Math.exp(-dt * (stopped ? 1.8 : running ? 1.6 : 4)));
   if (running && !stopped && video.paused && !video.classList.contains('frozen')) video.play().catch(() => {});
-  if (running) video.playbackRate = Math.max(.1, Math.min(1.8, speed / 170));
+  if (running) { const pr = Math.round(Math.max(.5, Math.min(1.8, speed / 170)) * 20) / 20; if (Math.abs(video.playbackRate - pr) >= .05) video.playbackRate = pr; } // iOS trava se a velocidade muda todo quadro
   if (stopped && speed < 3 && !video.paused) video.pause();
   $('speed').textContent = Math.round(speed); SFX.engineSpeed(speed);
   if ($('tSpeed')) $('tSpeed').textContent = Math.round(speed) + ' KM/H';
